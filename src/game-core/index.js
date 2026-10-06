@@ -9,7 +9,7 @@ const config = {
   height: 540,
   parent: 'game-core-container',
   scene: [
-    //LoadingScene, 
+    LoadingScene, 
     MenuScene, 
     GameScene
   ],

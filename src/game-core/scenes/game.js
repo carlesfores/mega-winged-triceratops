@@ -1,9 +1,12 @@
 import Phaser from "phaser";
 import Player from "../objects/player";
+import GameHud from "../objects/game-hud";
+import Modal from "../objects/modal";
 
 const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;
 const LEVEL_END = 6600;
+const PLAYER_START_X = 110;
 
 const PLATFORM_HEIGHTS = {
   high: 330,
@@ -137,37 +140,12 @@ export default class MainGameScene extends Phaser.Scene {
   }
 
   createPlayer() {
-    this.player = new Player(this, 110, PLATFORM_HEIGHTS.middle - 18, "runner");
+    this.player = new Player(this, PLAYER_START_X, PLATFORM_HEIGHTS.middle - 18, "runner");
     this.cameras.main.startFollow(this.player, true, 1, 0);
   }
 
   createHud() {
-    this.scoreText = this.add
-      .text(GAME_WIDTH - 26, 22, "ITEMS 0", {
-        fontFamily: "monospace",
-        fontSize: "18px",
-        fontStyle: "bold",
-        color: "#f5e6b8",
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(10);
-
-    this.add
-      .text(
-        GAME_WIDTH / 2,
-        GAME_HEIGHT - 24,
-        "IZQ. / ESPACIO: SALTO DOBLE  ·  DER. / X: DASH",
-        {
-          fontFamily: "monospace",
-          fontSize: "14px",
-          color: "#8eb8b0",
-          letterSpacing: 1,
-        },
-      )
-      .setOrigin(0.5, 1)
-      .setScrollFactor(0)
-      .setDepth(10);
+    this.hud = new GameHud(this);
   }
 
   createInput() {
@@ -205,7 +183,7 @@ export default class MainGameScene extends Phaser.Scene {
   collectItem(player, item) {
     item.destroy();
     this.score += 1;
-    this.scoreText.setText(`ITEMS ${this.score}`);
+    this.hud.setScore(this.score);
   }
 
   update() {
@@ -213,6 +191,9 @@ export default class MainGameScene extends Phaser.Scene {
       return;
     }
 
+    this.player.setLevelProgress(
+      (this.player.x - PLAYER_START_X) / (LEVEL_END - PLAYER_START_X),
+    );
     this.player.update();
 
     if (this.player.y > GAME_HEIGHT + 80) {
@@ -230,67 +211,15 @@ export default class MainGameScene extends Phaser.Scene {
     this.isGameOver = true;
     this.player.stop();
 
-    const title = didWin ? "¡META!" : "¡HAS CAÍDO!";
-    const message = didWin
-      ? `Has conseguido ${this.score} items`
-      : `Items conseguidos: ${this.score}`;
-    const overlay = this.add.container(0, 0).setDepth(10).setScrollFactor(0);
-    const backdrop = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      0x101722,
-      0.88,
-    );
-    const heading = this.add
-      .text(GAME_WIDTH / 2, 190, title, {
-        fontFamily: "monospace",
-        fontSize: "42px",
-        fontStyle: "bold",
-        color: "#f5e6b8",
-      })
-      .setOrigin(0.5);
-    const result = this.add
-      .text(GAME_WIDTH / 2, 245, message, {
-        fontFamily: "monospace",
-        fontSize: "20px",
-        color: "#8eb8b0",
-      })
-      .setOrigin(0.5);
-    const restart = this.createOverlayButton(340, "REINTENTAR", () => {
-      this.scene.restart();
+    this.endGameModal = new Modal(this, {
+      title: didWin ? "¡META!" : "¡HAS CAÍDO!",
+      message: didWin
+        ? `Has conseguido ${this.score} items`
+        : `Items conseguidos: ${this.score}`,
+      buttons: [
+        { label: "REINTENTAR", action: () => this.scene.restart() },
+        { label: "MENÚ", action: () => this.scene.start("MenuScene") },
+      ],
     });
-    const menu = this.createOverlayButton(410, "MENÚ", () => {
-      this.scene.start("MenuScene");
-    });
-
-    overlay.add([backdrop, heading, result]);
-  }
-
-  createOverlayButton(y, label, action) {
-    const background = this.add
-      .rectangle(GAME_WIDTH / 2, y, 250, 52, 0x263b49)
-      .setStrokeStyle(2, 0x8eb8b0)
-      .setScrollFactor(0)
-      .setDepth(11)
-      .setInteractive({ useHandCursor: true });
-    const text = this.add
-      .text(GAME_WIDTH / 2, y, label, {
-        fontFamily: "monospace",
-        fontSize: "20px",
-        fontStyle: "bold",
-        color: "#f5e6b8",
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(12);
-
-    background
-      .on("pointerover", () => background.setFillStyle(0x3b5965))
-      .on("pointerout", () => background.setFillStyle(0x263b49))
-      .on("pointerup", action);
-
-    return [background, text];
   }
 }

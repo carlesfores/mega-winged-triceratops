@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 
-const RUN_SPEED = 250;
-const DASH_SPEED = 620;
+const RUN_SPEED_START = 300;
+const RUN_SPEED_END = 450;
+const DASH_SPEED_START = 744;
+const DASH_SPEED_END = 1020;
 const DASH_DURATION = 300;
 const DASH_COOLDOWN = 700;
 const JUMP_VELOCITY = -570;
@@ -19,6 +21,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.touchJumpHeld = false;
     this.dashEndsAt = 0;
     this.dashAvailableAt = 0;
+    this.runSpeed = RUN_SPEED_START;
+    this.dashSpeed = DASH_SPEED_START;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -27,7 +31,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(3);
     this.setCollideWorldBounds(false);
     this.setGravityY(0);
-    this.setMaxVelocity(DASH_SPEED, 850);
+    this.setMaxVelocity(DASH_SPEED_END, 850);
     this.body.setSize(12, 14).setOffset(2, 2);
 
     this.keys = scene.input.keyboard.addKeys({
@@ -82,6 +86,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.touchJumpHeld = false;
   }
 
+  setLevelProgress(progress) {
+    const levelProgress = Phaser.Math.Clamp(progress, 0, 1);
+    this.runSpeed = Phaser.Math.Linear(RUN_SPEED_START, RUN_SPEED_END, levelProgress);
+    this.dashSpeed = Phaser.Math.Linear(DASH_SPEED_START, DASH_SPEED_END, levelProgress);
+  }
+
   dash() {
     const now = this.scene.time.now;
     if (now < this.dashAvailableAt) {
@@ -123,7 +133,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.isDashing = this.scene.time.now < this.dashEndsAt;
-    this.setVelocityX(this.isDashing ? DASH_SPEED : RUN_SPEED);
+    this.setVelocityX(this.isDashing ? this.dashSpeed : this.runSpeed);
 
     if (grounded) {
       this.play("runner-run", true);
