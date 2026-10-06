@@ -17,19 +17,25 @@ const PLATFORM_HEIGHTS = {
 const PLATFORM_LAYOUT = [
   { x: 0, width: 520, height: "middle" },
   { x: 650, width: 330, height: "high" },
-  { x: 1080, width: 300, height: "middle" },
+  { x: 1080, width: 300, height: "middle", slope: -24 },
   { x: 1480, width: 300, height: "low" },
-  { x: 1880, width: 340, height: "middle" },
+  { x: 1880, width: 340, height: "middle", slope: 28 },
   { x: 2320, width: 330, height: "high" },
-  { x: 2750, width: 300, height: "low" },
+  { x: 2750, width: 300, height: "low", slope: -30 },
   { x: 3150, width: 340, height: "middle" },
-  { x: 3590, width: 340, height: "high" },
+  { x: 3590, width: 340, height: "high", slope: 28 },
   { x: 4030, width: 300, height: "middle" },
-  { x: 4430, width: 300, height: "low" },
+  { x: 4430, width: 300, height: "low", slope: -26 },
   { x: 4830, width: 350, height: "high" },
-  { x: 5280, width: 300, height: "middle" },
-  { x: 5680, width: 330, height: "low" },
+  { x: 5280, width: 300, height: "middle", slope: 28 },
+  { x: 5680, width: 330, height: "low", slope: -24 },
   { x: 6110, width: 490, height: "middle" },
+];
+
+const OBSTACLE_LAYOUT = [
+  { platformIndex: 2, offset: 200, size: 80 },
+  { platformIndex: 7, offset: 225, size: 80 },
+  { platformIndex: 12, offset: 205, size: 80 },
 ];
 
 export default class MainGameScene extends Phaser.Scene {
@@ -47,30 +53,9 @@ export default class MainGameScene extends Phaser.Scene {
     this.createPlayer();
     this.createHud();
     this.createInput();
-
-    this.physics.add.collider(this.player, this.platforms);
-    this.physics.add.overlap(
-      this.player,
-      this.items,
-      this.collectItem,
-      undefined,
-      this,
-    );
   }
 
   createTextures() {
-    if (!this.textures.exists("runner-platform")) {
-      const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-      graphics.fillStyle(0x385b60);
-      graphics.fillRect(0, 0, 64, 24);
-      graphics.fillStyle(0x8eb8b0);
-      graphics.fillRect(0, 0, 64, 4);
-      graphics.fillStyle(0x263b49);
-      graphics.fillRect(0, 8, 64, 2);
-      graphics.generateTexture("runner-platform", 64, 24);
-      graphics.destroy();
-    }
-
     if (!this.textures.exists("runner-item")) {
       const graphics = this.make.graphics({ x: 0, y: 0, add: false });
       graphics.fillStyle(0xf5e6b8);
@@ -103,32 +88,102 @@ export default class MainGameScene extends Phaser.Scene {
       })
       .setScrollFactor(0);
 
-    this.platforms = this.physics.add.staticGroup();
-    this.items = this.physics.add.staticGroup();
-
-    PLATFORM_LAYOUT.forEach(({ x, width, height }) => {
-      const top = PLATFORM_HEIGHTS[height];
-      const platform = this.platforms
-        .create(x + width / 2, top + 12, "runner-platform")
-        .setDisplaySize(width, 24)
-        .refreshBody();
-      platform.setDepth(1);
-
-      this.createItemsOnPlatform(x, width, top);
+    this.platformGraphics = this.add.graphics().setDepth(1);
+    PLATFORM_LAYOUT.forEach((platform, index) => {
+      this.createPlatform(platform);
+      this.createItemsOnPlatform(platform);
+      const obstacle = OBSTACLE_LAYOUT.find((entry) => entry.platformIndex === index);
+      if (obstacle) {
+        this.createObstacle(platform, obstacle);
+      }
     });
 
-    this.physics.world.gravity.y = 1500;
     this.cameras.main.setBounds(0, 0, LEVEL_END, GAME_HEIGHT);
   }
 
-  createItemsOnPlatform(x, width, top) {
+  getPlatformTop(platform, progress) {
+    const baseTop = PLATFORM_HEIGHTS[platform.height];
+    return baseTop - (platform.slope || 0) / 2 + (platform.slope || 0) * progress;
+  }
+
+  createPlatform(platform) {
+    const { x, width } = platform;
+    const topLeft = this.getPlatformTop(platform, 0);
+    const topRight = this.getPlatformTop(platform, 1);
+    const points = [
+      { x, y: topLeft },
+      { x: x + width, y: topRight },
+      { x: x + width, y: topRight + 24 },
+      { x, y: topLeft + 24 },
+    ];
+
+    this.platformGraphics.fillStyle(0x385b60);
+    this.platformGraphics.fillPoints(points, true);
+    this.platformGraphics.lineStyle(4, 0x8eb8b0);
+    this.platformGraphics.beginPath();
+    this.platformGraphics.moveTo(points[0].x, points[0].y);
+    this.platformGraphics.lineTo(points[1].x, points[1].y);
+    this.platformGraphics.strokePath();
+    this.platformGraphics.lineStyle(2, 0x263b49);
+    this.platformGraphics.lineBetween(x, topLeft + 12, x + width, topRight + 12);
+
+    this.matter.add.fromVertices(
+      x + width / 2,
+      (topLeft + topRight) / 2 + 12,
+      points,
+      { isStatic: true, friction: 0.8, label: "platform" },
+    );
+  }
+
+  createObstacle(platform, obstacle) {
+    const x = platform.x + obstacle.offset;
+    const progress = obstacle.offset / platform.width;
+    const baseY = this.getPlatformTop(platform, progress);
+    const radius = obstacle.size / (2 * Math.cos(Math.PI / 10));
+    const centerY = baseY - radius * Math.cos(Math.PI / 5);
+    const vertices = Array.from({ length: 5 }, (_, index) => {
+      const angle = -Math.PI / 2 + index * (2 * Math.PI / 5);
+      return {
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+      };
+    });
+    const points = vertices.map(({ x: vertexX, y: vertexY }) => ({
+      x: x + vertexX,
+      y: centerY + vertexY,
+    }));
+    const graphics = this.add.graphics().setDepth(2);
+    graphics.fillStyle(0xe28b62);
+    graphics.fillPoints(points, true);
+    graphics.lineStyle(2, 0xf5e6b8);
+    graphics.beginPath();
+    graphics.moveTo(points[0].x, points[0].y);
+    points.slice(1).forEach((point) => graphics.lineTo(point.x, point.y));
+    graphics.closePath();
+    graphics.strokePath();
+
+    this.matter.add.fromVertices(x, centerY, vertices, {
+      isStatic: true,
+      friction: 0.6,
+      label: "obstacle",
+    });
+  }
+
+  createItemsOnPlatform(platform) {
+    const { x, width } = platform;
     const itemCount = Math.max(1, Math.floor(width / 120));
     for (let index = 0; index < itemCount; index += 1) {
-      const itemX = x + ((index + 1) * width) / (itemCount + 1);
-      const item = this.items
-        .create(itemX, top - 34, "runner-item")
+      const progress = (index + 1) / (itemCount + 1);
+      const itemX = x + progress * width;
+      const itemY = this.getPlatformTop(platform, progress) - 34;
+      this.matter.add
+        .image(itemX, itemY, "runner-item", undefined, {
+          shape: { type: "circle", radius: 8 },
+          isStatic: true,
+          isSensor: true,
+          label: "collectible",
+        })
         .setDepth(2);
-      item.body.setSize(16, 16);
     }
   }
 
@@ -142,14 +197,16 @@ export default class MainGameScene extends Phaser.Scene {
   }
 
   createInput() {
+    const matterWorld = this.matter.world;
     this.input.on("pointerdown", this.handlePointerDown, this);
     this.input.on("pointerup", this.handlePointerUp, this);
     this.input.on("pointerupoutside", this.handlePointerUp, this);
+    matterWorld.on("collisionstart", this.handleCollisionStart, this);
     this.events.once("shutdown", () => {
       this.input.off("pointerdown", this.handlePointerDown, this);
       this.input.off("pointerup", this.handlePointerUp, this);
       this.input.off("pointerupoutside", this.handlePointerUp, this);
-      this.player.stop();
+      matterWorld.off("collisionstart", this.handleCollisionStart, this);
     });
   }
 
@@ -174,9 +231,28 @@ export default class MainGameScene extends Phaser.Scene {
   }
 
   collectItem(player, item) {
+    if (!item?.active) {
+      return;
+    }
     item.destroy();
     this.score += 1;
     this.hud.setScore(this.score);
+  }
+
+  handleCollisionStart(event) {
+    for (const pair of event.pairs) {
+      const bodyA = pair.bodyA.parent || pair.bodyA;
+      const bodyB = pair.bodyB.parent || pair.bodyB;
+      const otherBody = bodyA === this.player.body
+        ? bodyB
+        : bodyB === this.player.body
+          ? bodyA
+          : null;
+
+      if (otherBody?.label === "collectible") {
+        this.collectItem(this.player, otherBody.gameObject);
+      }
+    }
   }
 
   update() {

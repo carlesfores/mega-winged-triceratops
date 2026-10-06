@@ -8,15 +8,24 @@ const DASH_DURATION = 300;
 const DASH_COOLDOWN = 700;
 const JUMP_VELOCITY = -570;
 const AIR_JUMP_VELOCITY = -520;
+const MAX_FALL_SPEED = 900;
 const JUMP_RELEASE_MULTIPLIER = 0.45;
+const PHYSICS_HZ = 60;
 
-export default class Player extends Phaser.Physics.Arcade.Sprite {
+export default class Player extends Phaser.Physics.Matter.Sprite {
   constructor(scene, x, y, texture) {
-    super(scene, x, y, texture, 300);
+    super(scene.matter.world, x, y, texture, 300, {
+      shape: { type: "rectangle", width: 12, height: 14 },
+      friction: 0,
+      frictionAir: 0.01,
+      restitution: 0,
+      label: "player",
+    });
 
     this.scene = scene;
     this.isDashing = false;
     this.jumpsUsed = 0;
+    this.groundContacts = new Set();
     this.jumpInputHeld = false;
     this.touchJumpHeld = false;
     this.dashEndsAt = 0;
@@ -25,14 +34,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.dashSpeed = DASH_SPEED_START;
 
     scene.add.existing(this);
-    scene.physics.add.existing(this);
 
     this.setScale(2.5);
     this.setDepth(3);
-    this.setCollideWorldBounds(false);
-    this.setGravityY(0);
-    this.setMaxVelocity(DASH_SPEED_END, 850);
-    this.body.setSize(12, 14).setOffset(2, 2);
+    this.setFixedRotation();
+    this.setFriction(0, 0.01, 0);
+    this.setOnCollideActive((pair) => this.trackGroundContact(pair, true));
+    this.setOnCollideEnd((pair) => this.trackGroundContact(pair, false));
 
     this.keys = scene.input.keyboard.addKeys({
       jump: "SPACE",
@@ -65,9 +73,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  trackGroundContact(pair, isContacting) {
+    const playerIsBodyA = pair.bodyA === this.body || pair.bodyA.parent === this.body;
+    const otherBody = playerIsBodyA ? pair.bodyB : pair.bodyA;
+    const otherParent = otherBody.parent || otherBody;
+    const normalTowardPlayerY = playerIsBodyA
+      ? -pair.collision.normal.y
+      : pair.collision.normal.y;
+    const isGroundContact = normalTowardPlayerY > 0.5;
+
+    if (isContacting && isGroundContact) {
+      this.groundContacts.add(otherParent.id);
+      if (this.body.velocity.y >= 0) {
+        this.jumpsUsed = 0;
+      }
+    } else if (!isContacting) {
+      this.groundContacts.delete(otherParent.id);
+    }
+  }
+
   jump(isTouch = false) {
-    const grounded = (this.body.blocked.down || this.body.touching.down)
-      && this.body.velocity.y >= 0;
+    const grounded = this.groundContacts.size > 0 && this.body.velocity.y >= 0;
     if (grounded) {
       this.jumpsUsed = 0;
     }
@@ -75,7 +101,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    this.setVelocityY(this.jumpsUsed === 0 ? JUMP_VELOCITY : AIR_JUMP_VELOCITY);
+    const jumpVelocity = this.jumpsUsed === 0 ? JUMP_VELOCITY : AIR_JUMP_VELOCITY;
+    this.setVelocityY(jumpVelocity / PHYSICS_HZ);
     this.jumpsUsed += 1;
     this.jumpInputHeld = true;
     this.touchJumpHeld = isTouch;
@@ -117,8 +144,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.dash();
     }
 
-    const grounded = (this.body.blocked.down || this.body.touching.down)
-      && this.body.velocity.y >= 0;
+    const grounded = this.groundContacts.size > 0 && this.body.velocity.y >= 0;
     if (grounded) {
       this.jumpsUsed = 0;
     }
@@ -132,8 +158,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.jumpInputHeld = false;
     }
 
+    if (this.body.velocity.y > MAX_FALL_SPEED / PHYSICS_HZ) {
+      this.setVelocityY(MAX_FALL_SPEED / PHYSICS_HZ);
+    }
+
     this.isDashing = this.scene.time.now < this.dashEndsAt;
-    this.setVelocityX(this.isDashing ? this.dashSpeed : this.runSpeed);
+    const runVelocity = this.isDashing ? this.dashSpeed : this.runSpeed;
+    this.setVelocityX(runVelocity / PHYSICS_HZ);
 
     if (grounded) {
       this.play("runner-run", true);
@@ -142,6 +173,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   stop() {
     this.isDashing = false;
+    this.groundContacts.clear();
     this.touchJumpHeld = false;
     this.jumpInputHeld = false;
     this.setVelocity(0, 0);

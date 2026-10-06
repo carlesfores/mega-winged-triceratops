@@ -18,10 +18,10 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: {
-    default: 'arcade',
-    arcade: {
-      debug: true,
-      gravity: { y: 0 }
+    default: "matter",
+    matter: {
+      gravity: { x: 0, y: 1.5, scale: 0.001 },
+      debug: false,
     }
   },
   pixelArt: true,
