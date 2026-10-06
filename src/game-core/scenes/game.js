@@ -8,6 +8,8 @@ const GAME_HEIGHT = 540;
 const LEVEL_END = 6600;
 const PLAYER_START_X = 110;
 const GAME_OVER_EXPLOSION_DURATION = 650;
+const COLLECTIBLE_DISPLAY_SIZE = 28;
+const COLLECTIBLE_SENSOR_RADIUS = 8;
 
 const PLATFORM_HEIGHTS = {
   high: 330,
@@ -16,21 +18,103 @@ const PLATFORM_HEIGHTS = {
 };
 
 const PLATFORM_LAYOUT = [
-  { x: 0, width: 520, height: "middle" },
-  { x: 650, width: 330, height: "high" },
-  { x: 1080, width: 300, height: "middle", slope: -24 },
-  { x: 1480, width: 300, height: "low" },
-  { x: 1880, width: 340, height: "middle", slope: 28 },
-  { x: 2320, width: 330, height: "high" },
-  { x: 2750, width: 300, height: "low", slope: -30 },
-  { x: 3150, width: 340, height: "middle" },
-  { x: 3590, width: 340, height: "high", slope: 28 },
-  { x: 4030, width: 300, height: "middle" },
-  { x: 4430, width: 300, height: "low", slope: -26 },
-  { x: 4830, width: 350, height: "high", },
-  { x: 5280, width: 300, height: "middle", slope: 28 },
-  { x: 5680, width: 330, height: "low", slope: -24 },
-  { x: 6110, width: 490, height: "middle" },
+  {
+    x: 0,
+    width: 520,
+    height: "middle",
+    collectibleProgress: [0.2, 0.4, 0.6, 0.8],
+  },
+  {
+    x: 650,
+    width: 330,
+    height: "high",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 1080,
+    width: 300,
+    height: "middle",
+    slope: -24,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 1480,
+    width: 300,
+    height: "low",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 1880,
+    width: 340,
+    height: "middle",
+    slope: 28,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 2320,
+    width: 330,
+    height: "high",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 2750,
+    width: 300,
+    height: "low",
+    slope: -30,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 3150,
+    width: 340,
+    height: "middle",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 3590,
+    width: 340,
+    height: "high",
+    slope: 28,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 4030,
+    width: 300,
+    height: "middle",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 4430,
+    width: 300,
+    height: "low",
+    slope: -26,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 4830,
+    width: 350,
+    height: "high",
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 5280,
+    width: 300,
+    height: "middle",
+    slope: 28,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 5680,
+    width: 330,
+    height: "low",
+    slope: -24,
+    collectibleProgress: [0.33, 0.67],
+  },
+  {
+    x: 6110,
+    width: 490,
+    height: "middle",
+    collectibleProgress: [0.2, 0.4, 0.6, 0.8],
+  },
 ];
 
 const OBSTACLE_LAYOUT = [
@@ -51,23 +135,10 @@ export default class MainGameScene extends Phaser.Scene {
     this.score = 0;
     this.isGameOver = false;
     this.obstaclesByBodyId = new Map();
-    this.createTextures();
     this.createWorld();
     this.createPlayer();
     this.createHud();
     this.createInput();
-  }
-
-  createTextures() {
-    if (!this.textures.exists("runner-item")) {
-      const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-      graphics.fillStyle(0xf5e6b8);
-      graphics.fillCircle(10, 10, 9);
-      graphics.fillStyle(0x8eb8b0);
-      graphics.fillCircle(10, 10, 4);
-      graphics.generateTexture("runner-item", 20, 20);
-      graphics.destroy();
-    }
   }
 
   createWorld() {
@@ -94,8 +165,10 @@ export default class MainGameScene extends Phaser.Scene {
     this.platformGraphics = this.add.graphics().setDepth(1);
     PLATFORM_LAYOUT.forEach((platform, index) => {
       this.createPlatform(platform);
-      this.createItemsOnPlatform(platform);
-      const obstacle = OBSTACLE_LAYOUT.find((entry) => entry.platformIndex === index);
+      this.createCollectiblesOnPlatform(platform);
+      const obstacle = OBSTACLE_LAYOUT.find(
+        (entry) => entry.platformIndex === index,
+      );
       if (obstacle) {
         this.createObstacle(platform, obstacle);
       }
@@ -106,7 +179,9 @@ export default class MainGameScene extends Phaser.Scene {
 
   getPlatformTop(platform, progress) {
     const baseTop = PLATFORM_HEIGHTS[platform.height];
-    return baseTop - (platform.slope || 0) / 2 + (platform.slope || 0) * progress;
+    return (
+      baseTop - (platform.slope || 0) / 2 + (platform.slope || 0) * progress
+    );
   }
 
   createPlatform(platform) {
@@ -128,7 +203,12 @@ export default class MainGameScene extends Phaser.Scene {
     this.platformGraphics.lineTo(points[1].x, points[1].y);
     this.platformGraphics.strokePath();
     this.platformGraphics.lineStyle(2, 0x263b49);
-    this.platformGraphics.lineBetween(x, topLeft + 12, x + width, topRight + 12);
+    this.platformGraphics.lineBetween(
+      x,
+      topLeft + 12,
+      x + width,
+      topRight + 12,
+    );
 
     this.matter.add.fromVertices(
       x + width / 2,
@@ -145,7 +225,7 @@ export default class MainGameScene extends Phaser.Scene {
     const radius = obstacle.size / (2 * Math.cos(Math.PI / 10));
     const centerY = baseY - radius * Math.cos(Math.PI / 5);
     const vertices = Array.from({ length: 5 }, (_, index) => {
-      const angle = -Math.PI / 2 + index * (2 * Math.PI / 5);
+      const angle = -Math.PI / 2 + index * ((2 * Math.PI) / 5);
       return {
         x: radius * Math.cos(angle),
         y: radius * Math.sin(angle),
@@ -173,26 +253,38 @@ export default class MainGameScene extends Phaser.Scene {
     this.obstaclesByBodyId.set(body.id, { body, graphics });
   }
 
-  createItemsOnPlatform(platform) {
-    const { x, width } = platform;
-    const itemCount = Math.max(1, Math.floor(width / 120));
-    for (let index = 0; index < itemCount; index += 1) {
-      const progress = (index + 1) / (itemCount + 1);
+  createCollectiblesOnPlatform(platform) {
+    const { x, width, collectibleProgress = [] } = platform;
+    const collectibleScale =
+      COLLECTIBLE_DISPLAY_SIZE /
+      this.textures.get("leaf_0").getSourceImage().width;
+
+    for (const progress of collectibleProgress) {
       const itemX = x + progress * width;
       const itemY = this.getPlatformTop(platform, progress) - 34;
+      const sensorRadius = COLLECTIBLE_SENSOR_RADIUS / collectibleScale;
       this.matter.add
-        .image(itemX, itemY, "runner-item", undefined, {
-          shape: { type: "circle", radius: 8 },
+        .image(itemX, itemY, "leaf_0", undefined, {
+          shape: {
+            type: "circle",
+            radius: sensorRadius,
+          },
           isStatic: true,
           isSensor: true,
           label: "collectible",
         })
+        .setScale(collectibleScale)
         .setDepth(2);
     }
   }
 
   createPlayer() {
-    this.player = new Player(this, PLAYER_START_X, PLATFORM_HEIGHTS.middle - 18, "runner");
+    this.player = new Player(
+      this,
+      PLAYER_START_X,
+      PLATFORM_HEIGHTS.middle - 18,
+      "runner",
+    );
     this.cameras.main.startFollow(this.player, true, 1, 0);
   }
 
@@ -250,11 +342,12 @@ export default class MainGameScene extends Phaser.Scene {
     for (const pair of event.pairs) {
       const bodyA = pair.bodyA.parent || pair.bodyA;
       const bodyB = pair.bodyB.parent || pair.bodyB;
-      const otherBody = bodyA === this.player.body
-        ? bodyB
-        : bodyB === this.player.body
-          ? bodyA
-          : null;
+      const otherBody =
+        bodyA === this.player.body
+          ? bodyB
+          : bodyB === this.player.body
+            ? bodyA
+            : null;
 
       if (!otherBody) {
         continue;
@@ -334,7 +427,8 @@ export default class MainGameScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
 
-    const shockwave = this.add.circle(x, y, 18, 0x000000, 0)
+    const shockwave = this.add
+      .circle(x, y, 18, 0x000000, 0)
       .setStrokeStyle(4, 0x8eb8b0)
       .setDepth(5);
     this.tweens.add({
@@ -349,21 +443,12 @@ export default class MainGameScene extends Phaser.Scene {
     const colors = [0xe28b62, 0xf5e6b8, 0x8eb8b0];
     const shardCount = 12;
     for (let index = 0; index < shardCount; index += 1) {
-      const angle = (index / shardCount) * Math.PI * 2
-        + Phaser.Math.FloatBetween(-0.16, 0.16);
+      const angle =
+        (index / shardCount) * Math.PI * 2 +
+        Phaser.Math.FloatBetween(-0.16, 0.16);
       const distance = Phaser.Math.Between(60, 135);
       const shard = this.add
-        .triangle(
-          x,
-          y,
-          0,
-          -5,
-          5,
-          4,
-          -5,
-          4,
-          colors[index % colors.length],
-        )
+        .triangle(x, y, 0, -5, 5, 4, -5, 4, colors[index % colors.length])
         .setDepth(6)
         .setScale(Phaser.Math.FloatBetween(1.1, 2));
 
