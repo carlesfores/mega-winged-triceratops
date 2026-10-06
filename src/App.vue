@@ -25,11 +25,17 @@ onUnmounted(() => {
 
 <style scoped>
 #game-core-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+  touch-action: none;
+  background-color: #000;
+}
+
+#game-core-container :deep(canvas) {
+  display: block;
 }
 </style>

@@ -5,9 +5,9 @@ import GameScene from "./scenes/game";
 
 const config = {
   type: Phaser.AUTO,
-  width: 640,
-  height: 480,
-  parent: 'game-content', 
+  width: 960,
+  height: 540,
+  parent: 'game-core-container',
   scene: [
     LoadingScene, 
     MenuScene, 
