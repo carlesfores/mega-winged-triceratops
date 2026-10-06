@@ -8,9 +8,9 @@ const game = ref();
 onMounted(() => {
   game.value = InitGame('game-core-container');
 
-  EventBus.on('game-loaded', (scene) => {
-    console.log({scene});
-  });
+  // EventBus.on('game-loaded', (scene) => {
+  //   console.log({scene});
+  // });
 });
 
 onUnmounted(() => {

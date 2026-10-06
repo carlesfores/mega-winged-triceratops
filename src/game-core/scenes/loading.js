@@ -18,8 +18,6 @@ export default class LoadingScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 16,
     });
-    this.load.image("font-tekken-2", "/assets/sprites/font-tekken-2.png");
-    this.load.tilemapTiledJSON("level-map", "/assets/sprites/1-bit-map.json");
   }
 
   create() {
