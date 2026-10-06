@@ -39,13 +39,6 @@ export default class MainGameScene extends Phaser.Scene {
     this.isGameOver = false;
   }
 
-  preload() {
-    this.load.spritesheet("runner", "/assets/sprites/1-bit-tileset.png", {
-      frameWidth: 16,
-      frameHeight: 16,
-    });
-  }
-
   create() {
     this.score = 0;
     this.isGameOver = false;
