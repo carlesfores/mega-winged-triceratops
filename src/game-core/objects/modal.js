@@ -33,9 +33,9 @@ export default class Modal {
       .setOrigin(0.5);
 
     this.overlay.add([backdrop, heading, result]);
-    this.buttons = buttons.map(({ label, action }, index) => (
-      this.createButton(340 + index * 70, label, action)
-    ));
+    this.buttons = buttons.map(({ label, action }, index) =>
+      this.createButton(340 + index * 70, label, action),
+    );
   }
 
   createButton(y, label, action) {
@@ -69,3 +69,4 @@ export default class Modal {
     this.buttons.flat().forEach((button) => button.destroy());
   }
 }
+

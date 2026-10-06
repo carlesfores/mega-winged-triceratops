@@ -18,3 +18,4 @@ export default class GameHud {
     this.scoreText.setText(`ITEMS ${score}`);
   }
 }
+

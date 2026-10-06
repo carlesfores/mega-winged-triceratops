@@ -6,6 +6,16 @@ export default class LoadingScene extends Phaser.Scene {
   }
 
   preload() {
+    this.showLoadingMessage();
+    this.loadImages();
+    this.loadSpritesheet();
+  }
+
+  create() {
+    this.scene.start("MenuScene");
+  }
+
+  showLoadingMessage() {
     this.add
       .text(480, 270, "Cargando", {
         fontFamily: "monospace",
@@ -13,14 +23,17 @@ export default class LoadingScene extends Phaser.Scene {
         color: "#f5e6b8",
       })
       .setOrigin(0.5);
+  }
 
+  loadImages() {
+    this.load.image("leaf_0", "assets/sprites/leaf-00.png");
+  }
+
+  loadSpritesheet() {
     this.load.spritesheet("runner", "/assets/sprites/1-bit-tileset.png", {
       frameWidth: 16,
       frameHeight: 16,
     });
   }
-
-  create() {
-    this.scene.start("MenuScene");
-  }
 }
+

@@ -21,7 +21,7 @@ const PLATFORM_LAYOUT = [
   { x: 1080, width: 300, height: "middle", slope: -24 },
   { x: 1480, width: 300, height: "low" },
   { x: 1880, width: 340, height: "middle", slope: 28 },
-  { x: 2320, width: 330, height: "high", slope: -30  },
+  { x: 2320, width: 330, height: "high" },
   { x: 2750, width: 300, height: "low", slope: -30 },
   { x: 3150, width: 340, height: "middle" },
   { x: 3590, width: 340, height: "high", slope: 28 },
