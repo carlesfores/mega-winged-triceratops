@@ -1,9 +1,9 @@
 import Phaser from "phaser";
 
-const RUN_SPEED_START = 300;
-const RUN_SPEED_END = 450;
-const DASH_SPEED_START = 744;
-const DASH_SPEED_END = 1020;
+const RUN_SPEED_START = 390;
+const RUN_SPEED_END = 585;
+const DASH_SPEED_START = 960;
+const DASH_SPEED_END = 1320;
 const DASH_DURATION = 300;
 const DASH_COOLDOWN = 700;
 const JUMP_VELOCITY = -570;
@@ -115,8 +115,17 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
 
   setLevelProgress(progress) {
     const levelProgress = Phaser.Math.Clamp(progress, 0, 1);
-    this.runSpeed = Phaser.Math.Linear(RUN_SPEED_START, RUN_SPEED_END, levelProgress);
-    this.dashSpeed = Phaser.Math.Linear(DASH_SPEED_START, DASH_SPEED_END, levelProgress);
+    const accelerationProgress = levelProgress ** 2;
+    this.runSpeed = Phaser.Math.Linear(
+      RUN_SPEED_START,
+      RUN_SPEED_END,
+      accelerationProgress,
+    );
+    this.dashSpeed = Phaser.Math.Linear(
+      DASH_SPEED_START,
+      DASH_SPEED_END,
+      accelerationProgress,
+    );
   }
 
   dash() {
