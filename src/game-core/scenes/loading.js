@@ -8,6 +8,10 @@ export default class LoadingScene extends Phaser.Scene {
     this.loadImages();
   }
 
+  create() {
+    this.scene.start('MenuScene');
+  }
+
   loadAudios() {
     
   }
