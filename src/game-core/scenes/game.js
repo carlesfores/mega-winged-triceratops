@@ -43,11 +43,13 @@ export default class MainGameScene extends Phaser.Scene {
     super({ key: "GameScene" });
     this.score = 0;
     this.isGameOver = false;
+    this.obstaclesByBodyId = new Map();
   }
 
   create() {
     this.score = 0;
     this.isGameOver = false;
+    this.obstaclesByBodyId = new Map();
     this.createTextures();
     this.createWorld();
     this.createPlayer();
@@ -162,11 +164,12 @@ export default class MainGameScene extends Phaser.Scene {
     graphics.closePath();
     graphics.strokePath();
 
-    this.matter.add.fromVertices(x, centerY, vertices, {
+    const body = this.matter.add.fromVertices(x, centerY, vertices, {
       isStatic: true,
       friction: 0.6,
       label: "obstacle",
     });
+    this.obstaclesByBodyId.set(body.id, { body, graphics });
   }
 
   createItemsOnPlatform(platform) {
@@ -207,6 +210,7 @@ export default class MainGameScene extends Phaser.Scene {
       this.input.off("pointerup", this.handlePointerUp, this);
       this.input.off("pointerupoutside", this.handlePointerUp, this);
       matterWorld.off("collisionstart", this.handleCollisionStart, this);
+      this.obstaclesByBodyId.clear();
     });
   }
 
@@ -249,10 +253,32 @@ export default class MainGameScene extends Phaser.Scene {
           ? bodyA
           : null;
 
-      if (otherBody?.label === "collectible") {
+      if (!otherBody) {
+        continue;
+      }
+
+      if (otherBody.label === "collectible") {
         this.collectItem(this.player, otherBody.gameObject);
+      } else if (otherBody.label === "obstacle") {
+        this.handleObstacleCollision(otherBody);
       }
     }
+  }
+
+  handleObstacleCollision(body) {
+    const obstacle = this.obstaclesByBodyId.get(body.id);
+    if (!obstacle || this.isGameOver) {
+      return;
+    }
+
+    if (this.player.isDashing) {
+      this.matter.world.remove(obstacle.body);
+      obstacle.graphics.destroy();
+      this.obstaclesByBodyId.delete(body.id);
+      return;
+    }
+
+    this.endRun(false);
   }
 
   update() {
