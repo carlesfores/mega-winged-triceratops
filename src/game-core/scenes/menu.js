@@ -56,7 +56,7 @@ export default class MenuScene extends Phaser.Scene {
         action: () =>
           this.showPanel(
             "CÓMO JUGAR",
-            "Toca una vez o pulsa Espacio / ↑ para saltar.\nDoble toque o Mayús para hacer dash.",
+            "Avanzas automáticamente.\nEspacio / ↑ / Z o toque izq.: doble salto (mantén para saltar más).\nX / Mayús o toque der.: dash.",
           ),
       },
       {
