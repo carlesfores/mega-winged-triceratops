@@ -7,6 +7,7 @@ const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;
 const LEVEL_END = 6600;
 const PLAYER_START_X = 110;
+const GAME_OVER_EXPLOSION_DURATION = 650;
 
 const PLATFORM_HEIGHTS = {
   high: 330,
@@ -210,6 +211,8 @@ export default class MainGameScene extends Phaser.Scene {
       this.input.off("pointerup", this.handlePointerUp, this);
       this.input.off("pointerupoutside", this.handlePointerUp, this);
       matterWorld.off("collisionstart", this.handleCollisionStart, this);
+      this.gameOverModalTimer?.remove(false);
+      this.gameOverModalTimer = null;
       this.obstaclesByBodyId.clear();
     });
   }
@@ -304,8 +307,82 @@ export default class MainGameScene extends Phaser.Scene {
     }
 
     this.isGameOver = true;
+    this.cameras.main.stopFollow();
     this.player.stop();
+    const explosionX = this.player.x;
+    const explosionY = this.player.y;
+    this.player.setVisible(false);
+    this.playGameOverExplosion(explosionX, explosionY);
 
+    this.gameOverModalTimer = this.time.delayedCall(
+      GAME_OVER_EXPLOSION_DURATION,
+      () => {
+        this.gameOverModalTimer = null;
+        this.showGameOverModal(didWin);
+      },
+    );
+  }
+
+  playGameOverExplosion(x, y) {
+    const flash = this.add.circle(x, y, 18, 0xf5e6b8).setDepth(5);
+    this.tweens.add({
+      targets: flash,
+      scale: 3.5,
+      alpha: 0,
+      duration: 260,
+      ease: "Cubic.Out",
+      onComplete: () => flash.destroy(),
+    });
+
+    const shockwave = this.add.circle(x, y, 18, 0x000000, 0)
+      .setStrokeStyle(4, 0x8eb8b0)
+      .setDepth(5);
+    this.tweens.add({
+      targets: shockwave,
+      scale: 4,
+      alpha: 0,
+      duration: 460,
+      ease: "Cubic.Out",
+      onComplete: () => shockwave.destroy(),
+    });
+
+    const colors = [0xe28b62, 0xf5e6b8, 0x8eb8b0];
+    const shardCount = 12;
+    for (let index = 0; index < shardCount; index += 1) {
+      const angle = (index / shardCount) * Math.PI * 2
+        + Phaser.Math.FloatBetween(-0.16, 0.16);
+      const distance = Phaser.Math.Between(60, 135);
+      const shard = this.add
+        .triangle(
+          x,
+          y,
+          0,
+          -5,
+          5,
+          4,
+          -5,
+          4,
+          colors[index % colors.length],
+        )
+        .setDepth(6)
+        .setScale(Phaser.Math.FloatBetween(1.1, 2));
+
+      this.tweens.add({
+        targets: shard,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        angle: Phaser.Math.Between(-240, 240),
+        scale: 0,
+        alpha: 0,
+        duration: Phaser.Math.Between(360, 560),
+        delay: Phaser.Math.Between(0, 70),
+        ease: "Cubic.Out",
+        onComplete: () => shard.destroy(),
+      });
+    }
+  }
+
+  showGameOverModal(didWin) {
     this.endGameModal = new Modal(this, {
       title: didWin ? "¡META!" : "¡HAS CAÍDO!",
       message: didWin
