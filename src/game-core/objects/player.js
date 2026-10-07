@@ -93,6 +93,10 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
   }
 
   jump(isTouch = false) {
+    if (this.updateDashState()) {
+      return;
+    }
+
     const grounded = this.groundContacts.size > 0 && this.body.velocity.y >= 0;
     if (grounded) {
       this.jumpsUsed = 0;
@@ -137,20 +141,33 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
     this.isDashing = true;
     this.dashEndsAt = now + DASH_DURATION;
     this.dashAvailableAt = now + DASH_COOLDOWN;
+    this.setIgnoreGravity(true);
+    this.setVelocityY(0);
+  }
+
+  updateDashState() {
+    const isDashing = this.scene.time.now < this.dashEndsAt;
+    if (isDashing !== this.isDashing) {
+      this.isDashing = isDashing;
+      this.setIgnoreGravity(isDashing);
+    }
+    return this.isDashing;
   }
 
   update() {
-    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.jump);
-    const alternateJumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.alternateJump);
-    const alternateJump2Pressed = Phaser.Input.Keyboard.JustDown(this.keys.alternateJump2);
-    if (jumpPressed || alternateJumpPressed || alternateJump2Pressed) {
-      this.jump();
-    }
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.dash)
       || Phaser.Input.Keyboard.JustDown(this.keys.alternateDash)
     ) {
       this.dash();
+    }
+    this.updateDashState();
+
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.jump);
+    const alternateJumpPressed = Phaser.Input.Keyboard.JustDown(this.keys.alternateJump);
+    const alternateJump2Pressed = Phaser.Input.Keyboard.JustDown(this.keys.alternateJump2);
+    if (jumpPressed || alternateJumpPressed || alternateJump2Pressed) {
+      this.jump();
     }
 
     const grounded = this.groundContacts.size > 0 && this.body.velocity.y >= 0;
@@ -170,8 +187,10 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
     if (this.body.velocity.y > MAX_FALL_SPEED / PHYSICS_HZ) {
       this.setVelocityY(MAX_FALL_SPEED / PHYSICS_HZ);
     }
+    if (this.isDashing) {
+      this.setVelocityY(0);
+    }
 
-    this.isDashing = this.scene.time.now < this.dashEndsAt;
     const runVelocity = this.isDashing ? this.dashSpeed : this.runSpeed;
     this.setVelocityX(runVelocity / PHYSICS_HZ);
 
@@ -182,6 +201,7 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
 
   stop() {
     this.isDashing = false;
+    this.setIgnoreGravity(false);
     this.groundContacts.clear();
     this.touchJumpHeld = false;
     this.jumpInputHeld = false;
