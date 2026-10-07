@@ -151,17 +151,8 @@ export default class MainGameScene extends Phaser.Scene {
       )
       .setScrollFactor(0);
 
-    this.add.rectangle(480, 115, 960, 2, 0x243744).setScrollFactor(0);
-    this.add
-      .text(26, 22, "WINGED RUNNER", {
-        fontFamily: "monospace",
-        fontSize: "16px",
-        color: "#8eb8b0",
-        letterSpacing: 2,
-      })
-      .setScrollFactor(0);
-
     this.platformGraphics = this.add.graphics().setDepth(1);
+
     PLATFORM_LAYOUT.forEach((platform, index) => {
       this.createPlatform(platform);
       this.createCollectiblesOnPlatform(platform);
@@ -256,14 +247,14 @@ export default class MainGameScene extends Phaser.Scene {
     const { x, width, collectibleProgress = [] } = platform;
     const collectibleScale =
       COLLECTIBLE_DISPLAY_SIZE /
-      this.textures.get("leaf_0").getSourceImage().width;
+      this.textures.get("star").getSourceImage().width;
 
     for (const progress of collectibleProgress) {
       const itemX = x + progress * width;
       const itemY = this.getPlatformTop(platform, progress) - 34;
       const sensorRadius = COLLECTIBLE_SENSOR_RADIUS / collectibleScale;
       this.matter.add
-        .image(itemX, itemY, "leaf_0", undefined, {
+        .image(itemX, itemY, "star", undefined, {
           shape: {
             type: "circle",
             radius: sensorRadius,
@@ -440,6 +431,7 @@ export default class MainGameScene extends Phaser.Scene {
     });
 
     const colors = [0xe28b62, 0xf5e6b8, 0x8eb8b0];
+    
     const shardCount = 12;
     for (let index = 0; index < shardCount; index += 1) {
       const angle =
@@ -479,3 +471,4 @@ export default class MainGameScene extends Phaser.Scene {
     });
   }
 }
+

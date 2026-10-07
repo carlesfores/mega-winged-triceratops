@@ -27,6 +27,13 @@ export default class LoadingScene extends Phaser.Scene {
 
   loadImages() {
     this.load.image("leaf_0", "assets/sprites/leaf-00.png");
+    this.load.image("star", "assets/sprites/star.png");
+
+    this.load.image(
+      "button_depth",
+      "assets/sprites/button_rectangle_depth_line.png",
+    );
+    this.load.image("button_flat", "assets/sprites/button_rectangle_line.png");
   }
 
   loadSpritesheet() {

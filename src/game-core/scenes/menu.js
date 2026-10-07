@@ -7,21 +7,14 @@ export default class MenuScene extends Phaser.Scene {
 
   create() {
     this.menuView = this.add.container(0, 0);
-    this.createBackground(this.menuView);
+
+    this.createBackground();
     this.createTitle();
     this.createMenuButtons();
   }
 
-  createBackground(container) {
-    container.add([
-      this.add.rectangle(480, 270, 960, 540, 0x101722),
-      this.add
-        .rectangle(480, 270, 900, 480, 0x101722, 0)
-        .setStrokeStyle(4, 0x3b5363),
-      this.add
-        .rectangle(480, 270, 880, 460, 0x101722, 0)
-        .setStrokeStyle(2, 0x243744),
-    ]);
+  createBackground() {
+    this.menuView.add([this.add.rectangle(480, 270, 960, 540, 0x101722)]);
   }
 
   createTitle() {
@@ -36,16 +29,7 @@ export default class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const subtitle = this.add
-      .text(480, 151, "UNA NUEVA AVENTURA", {
-        fontFamily: "monospace",
-        fontSize: "16px",
-        color: "#8eb8b0",
-        letterSpacing: 5,
-      })
-      .setOrigin(0.5);
-
-    this.menuView.add([title, subtitle]);
+    this.menuView.add([title]);
   }
 
   createMenuButtons() {
@@ -73,22 +57,21 @@ export default class MenuScene extends Phaser.Scene {
 
   createButton(label, y, action, container = this.menuView) {
     const background = this.add
-      .rectangle(480, y, 300, 58, 0x263b49)
-      .setStrokeStyle(2, 0x8eb8b0)
+      .image(480, y, "button_depth")
       .setInteractive({ useHandCursor: true });
+
     const text = this.add
       .text(480, y, label, {
         fontFamily: "monospace",
-        fontSize: "22px",
+        fontSize: "16px",
         fontStyle: "bold",
-        color: "#f5e6b8",
+        color: "#101722",
       })
       .setOrigin(0.5);
 
-    background
-      .on("pointerover", () => background.setFillStyle(0x3b5965))
-      .on("pointerout", () => background.setFillStyle(0x263b49))
-      .on("pointerup", action);
+    background.on("pointerup", () => {
+      action();
+    });
 
     container.add([background, text]);
   }
